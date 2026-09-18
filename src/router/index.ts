@@ -40,8 +40,7 @@ const router = createRouter({
         {
           path: 'kontrak',
           name: 'kontrak',
-          component: () => import('@/views/PlaceholderView.vue'),
-          props: { title: 'Senarai Kontrak' },
+          component: () => import('@/views/KontrakView.vue'),
           meta: { roles: KONTRAK_ROLES, title: 'Senarai Kontrak' },
         },
         {
@@ -55,6 +54,12 @@ const router = createRouter({
           name: 'kontrak-pengesahan',
           component: () => import('@/views/PengesahanKontrakView.vue'),
           meta: { roles: ['PUU'], title: 'Pengesahan Kontrak' },
+        },
+        {
+          path: 'kontrak/:id',
+          name: 'kontrak-butiran',
+          component: () => import('@/views/KontrakButiranView.vue'),
+          meta: { roles: KONTRAK_ROLES, title: 'Butiran Kontrak' },
         },
         {
           path: 'kontrak/baharu',

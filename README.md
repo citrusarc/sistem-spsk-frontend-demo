@@ -70,7 +70,8 @@ Created by the backend's `seed.js`. The initial password for all of them is
 | --- | --- | --- |
 | `/login` | Log masuk | Public |
 | `/dashboard` | Dashboard: phase counts, alert counts, contract list | PT_KONTRAK, PUU, PEGAWAI_PENYEMAK |
-| `/kontrak` | Senarai Kontrak (placeholder, not built yet) | PT_KONTRAK, PUU, PEGAWAI_PENYEMAK |
+| `/kontrak` | Senarai Kontrak: all contracts, filters `?tapisan=tindakan`, `?status=`, `?warna=`; PT Kontrak closes the record or sends it back to PUU, PUU marks the re-review done. Shown as "Kontrak Selesai Disemak" (`DALAM_SEMAKAN`/`SELESAI` only) for PEGAWAI_PENYEMAK | PT_KONTRAK, PUU, PEGAWAI_PENYEMAK |
+| `/kontrak/:id` | Butiran Kontrak: details, PDF download, history, role actions. Notifications and dashboard rows open here | PT_KONTRAK, PUU, PEGAWAI_PENYEMAK |
 | `/kontrak/baharu` | Daftar Kontrak Baharu: form + PDF upload | PT_KONTRAK |
 | `/kontrak/pengesahan` | Pengesahan Kontrak: approve or reassign reviewer | PUU |
 | `/tugasan-saya` | Tugasan Saya: mark review done | PEGAWAI_PENYEMAK |

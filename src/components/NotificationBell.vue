@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Separator } from '@/components/ui/separator'
 import type { Notification } from '@/lib/api'
-import { markAsRead, notifications, unreadCount } from '@/lib/notifications'
+import { currentUser } from '@/lib/auth'
+import { destinasiNotifikasi, markAsRead, notifications, unreadCount } from '@/lib/notifications'
 
 const MAX_ITEMS = 5
 
@@ -22,6 +23,8 @@ async function handleSelect(n: Notification) {
   } catch (err) {
     toast.error(err instanceof Error ? err.message : 'Gagal menandakan notifikasi sebagai dibaca.')
   }
+  isOpen.value = false
+  router.push(destinasiNotifikasi(n, currentUser.value?.peranan))
 }
 
 function viewAll() {

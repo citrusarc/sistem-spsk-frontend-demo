@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { toast } from 'vue-sonner'
+import SuccessDialog from '@/components/SuccessDialog.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select } from '@/components/ui/select'
@@ -14,6 +15,8 @@ const selectedPenyemak = reactive<Record<string, string>>({})
 const submittingId = ref<string | null>(null)
 const isLoading = ref(true)
 const errorMessage = ref('')
+const isSuccessOpen = ref(false)
+const successMessage = ref('')
 
 async function loadData() {
   isLoading.value = true
@@ -40,9 +43,11 @@ async function handleApprove(contract: Contract) {
   try {
     const chosen = selectedPenyemak[contract.id]
     const changed = chosen !== contract.pegawai_penyemak_id
-    await setujuiPenugasan(contract.id, changed ? chosen : undefined)
+    const updated = await setujuiPenugasan(contract.id, changed ? chosen : undefined)
     contracts.value = contracts.value.filter((c) => c.id !== contract.id)
-    toast.success(`Kontrak ${contract.nama_kontrak} telah ditugaskan.`)
+    const penyemak = updated.pegawai_penyemak?.nama_penuh ?? 'pegawai penyemak'
+    successMessage.value = `Kontrak ${contract.nama_kontrak} telah ditugaskan kepada ${penyemak}. Pegawai Penyemak dan PT Kontrak telah dimaklumkan.`
+    isSuccessOpen.value = true
   } catch (err) {
     toast.error(err instanceof Error ? err.message : 'Pengesahan kontrak gagal.')
   } finally {
@@ -97,5 +102,7 @@ async function handleApprove(contract: Contract) {
         </Table>
       </CardContent>
     </Card>
+
+    <SuccessDialog v-model:open="isSuccessOpen" title="Penugasan Disahkan" :message="successMessage" />
   </div>
 </template>

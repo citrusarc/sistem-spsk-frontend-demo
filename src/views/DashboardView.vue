@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, type Component } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter, type RouteLocationRaw } from 'vue-router'
 import {
   AlertTriangle,
   CheckCircle,
@@ -60,6 +60,7 @@ const AMARAN_CARDS: { key: 'KUNING' | 'JINGGA' | 'MERAH'; label: string; range: 
     { key: 'MERAH', label: 'Merah', range: '28 hari bekerja ke atas', icon: OctagonAlert, class: 'border-l-red-500 text-red-600' },
   ]
 
+const router = useRouter()
 const summary = ref<DashboardSummary | null>(null)
 const contracts = ref<Contract[]>([])
 const isLoading = ref(true)
@@ -85,6 +86,23 @@ const quickAction = computed(() => {
       return null
   }
 })
+
+// Pautan kad dashboard ke senarai kontrak bertapis. Senarai Pegawai Penyemak hanya memaparkan kontrak
+// DALAM_SEMAKAN/SELESAI, jadi kerja yang belum siap dipautkan ke Tugasan Saya dan kad lain tidak dipautkan.
+function fasaLink(key: StatusSemasa): RouteLocationRaw | null {
+  const peranan = currentUser.value?.peranan
+  if (peranan === 'PEGAWAI_PENYEMAK') {
+    if (key === 'DALAM_TINDAKAN') return { name: 'tugasan-saya' }
+    if (key === 'TERIMA') return null
+  }
+  if (peranan === 'PUU' && key === 'TERIMA') return { name: 'kontrak-pengesahan' }
+  return { name: 'kontrak', query: { status: key } }
+}
+
+function amaranLink(key: 'KUNING' | 'JINGGA' | 'MERAH'): RouteLocationRaw | null {
+  if (currentUser.value?.peranan === 'PEGAWAI_PENYEMAK') return null
+  return { name: 'kontrak', query: { warna: key } }
+}
 
 const jumlahAmaran = computed(() =>
   summary.value ? summary.value.amaran.KUNING + summary.value.amaran.JINGGA + summary.value.amaran.MERAH : 0,
@@ -144,19 +162,27 @@ onMounted(async () => {
     </div>
 
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <Card v-for="card in FASA_CARDS" :key="card.key" class="gap-3">
-        <CardHeader class="flex flex-row items-center justify-between">
-          <CardTitle class="text-muted-foreground text-sm font-medium">{{ card.label }}</CardTitle>
-          <div :class="['flex size-9 items-center justify-center rounded-lg', card.class]">
-            <component :is="card.icon" class="size-4" />
-          </div>
-        </CardHeader>
-        <CardContent class="space-y-1">
-          <Skeleton v-if="isLoading" class="h-9 w-16" />
-          <p v-else class="text-3xl font-semibold tracking-tight">{{ summary ? summary.fasa[card.key] : '—' }}</p>
-          <p class="text-muted-foreground text-xs">{{ card.description }}</p>
-        </CardContent>
-      </Card>
+      <component
+        :is="fasaLink(card.key) ? RouterLink : 'div'"
+        v-for="card in FASA_CARDS"
+        :key="card.key"
+        :to="fasaLink(card.key) ?? undefined"
+        :class="['block rounded-xl', fasaLink(card.key) && 'transition-shadow hover:shadow-md']"
+      >
+        <Card class="h-full gap-3">
+          <CardHeader class="flex flex-row items-center justify-between">
+            <CardTitle class="text-muted-foreground text-sm font-medium">{{ card.label }}</CardTitle>
+            <div :class="['flex size-9 items-center justify-center rounded-lg', card.class]">
+              <component :is="card.icon" class="size-4" />
+            </div>
+          </CardHeader>
+          <CardContent class="space-y-1">
+            <Skeleton v-if="isLoading" class="h-9 w-16" />
+            <p v-else class="text-3xl font-semibold tracking-tight">{{ summary ? summary.fasa[card.key] : '—' }}</p>
+            <p class="text-muted-foreground text-xs">{{ card.description }}</p>
+          </CardContent>
+        </Card>
+      </component>
     </div>
 
     <Card>
@@ -171,10 +197,12 @@ onMounted(async () => {
         </Badge>
       </CardHeader>
       <CardContent class="grid gap-4 sm:grid-cols-3">
-        <div
+        <component
+          :is="amaranLink(a.key) ? RouterLink : 'div'"
           v-for="a in AMARAN_CARDS"
           :key="a.key"
-          :class="['flex items-center gap-4 rounded-lg border border-l-4 p-4', a.class]"
+          :to="amaranLink(a.key) ?? undefined"
+          :class="['flex items-center gap-4 rounded-lg border border-l-4 p-4', a.class, amaranLink(a.key) && 'hover:bg-accent transition-colors']"
         >
           <component :is="a.icon" class="size-5 shrink-0" />
           <div class="min-w-0 flex-1">
@@ -183,7 +211,7 @@ onMounted(async () => {
           </div>
           <Skeleton v-if="isLoading" class="h-8 w-10" />
           <p v-else class="text-foreground text-2xl font-semibold">{{ summary ? summary.amaran[a.key] : '—' }}</p>
-        </div>
+        </component>
       </CardContent>
     </Card>
 
@@ -216,9 +244,20 @@ onMounted(async () => {
               </TableRow>
             </template>
             <template v-else>
-              <TableRow v-for="c in sortedContracts" :key="c.id">
+              <TableRow
+                v-for="c in sortedContracts"
+                :key="c.id"
+                class="cursor-pointer"
+                @click="router.push({ name: 'kontrak-butiran', params: { id: c.id } })"
+              >
                 <TableCell>
-                  <p class="font-medium">{{ c.nama_kontrak }}</p>
+                  <RouterLink
+                    :to="{ name: 'kontrak-butiran', params: { id: c.id } }"
+                    class="font-medium hover:underline"
+                    @click.stop
+                  >
+                    {{ c.nama_kontrak }}
+                  </RouterLink>
                   <p class="text-muted-foreground text-xs">{{ c.pemilik_kontrak }} · {{ c.bahagian_pemilik }}</p>
                 </TableCell>
                 <TableCell>
@@ -231,7 +270,12 @@ onMounted(async () => {
                     {{ STATUS_SEMASA_BADGE[c.status_semasa].label }}
                   </Badge>
                 </TableCell>
-                <TableCell>{{ c.pegawai_penyemak?.nama_penuh ?? '—' }}</TableCell>
+                <TableCell>
+                  {{ c.pegawai_penyemak?.nama_penuh ?? '—' }}
+                  <span v-if="c.pegawai_penyemak && c.status_semasa === 'TERIMA'" class="text-muted-foreground">
+                    (cadangan)
+                  </span>
+                </TableCell>
                 <TableCell class="text-right tabular-nums">{{ c.hari_bekerja ?? '—' }}</TableCell>
                 <TableCell>
                   <Badge v-if="c.status_warna" :class="STATUS_WARNA_BADGE[c.status_warna].class">

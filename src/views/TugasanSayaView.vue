@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
+import SuccessDialog from '@/components/SuccessDialog.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -23,6 +24,7 @@ const errorMessage = ref('')
 const isDialogOpen = ref(false)
 const selectedContract = ref<Contract | null>(null)
 const isSubmitting = ref(false)
+const isSuccessOpen = ref(false)
 
 async function loadData() {
   isLoading.value = true
@@ -52,7 +54,7 @@ async function handleConfirm() {
     await selesaiSemakan(selectedContract.value.id)
     contracts.value = contracts.value.filter((c) => c.id !== selectedContract.value!.id)
     isDialogOpen.value = false
-    toast.success(`Semakan ${selectedContract.value.nama_kontrak} ditandakan selesai.`)
+    isSuccessOpen.value = true
   } catch (err) {
     toast.error(err instanceof Error ? err.message : 'Gagal menandakan semakan selesai.')
   } finally {
@@ -123,5 +125,11 @@ async function handleConfirm() {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <SuccessDialog
+      v-model:open="isSuccessOpen"
+      title="Semakan Selesai"
+      message="Semakan selesai. PT Kontrak telah dimaklumkan."
+    />
   </div>
 </template>

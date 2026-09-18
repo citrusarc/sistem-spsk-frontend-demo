@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ChevronRight, Menu } from '@lucide/vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import NotificationBell from '@/components/NotificationBell.vue'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
-import { startNotificationPolling, stopNotificationPolling } from '@/lib/notifications'
+import type { Notification } from '@/lib/api'
+import { currentUser } from '@/lib/auth'
+import { destinasiNotifikasi, markAsRead, startNotificationPolling, stopNotificationPolling } from '@/lib/notifications'
 
 const route = useRoute()
 const router = useRouter()
@@ -19,7 +21,21 @@ watch(
   },
 )
 
-onMounted(() => startNotificationPolling(() => router.push({ name: 'notifikasi' })))
+// Senarai Kontrak dinamakan "Kontrak Selesai Disemak" bagi Pegawai Penyemak (sama seperti menu sidebar).
+const pageTitle = computed(() =>
+  route.name === 'kontrak' && currentUser.value?.peranan === 'PEGAWAI_PENYEMAK'
+    ? 'Kontrak Selesai Disemak'
+    : route.meta.title,
+)
+
+// Lihat pada toast satu notifikasi → halaman berkaitan; toast berkumpulan → skrin Notifikasi.
+function handleToastView(n?: Notification) {
+  if (!n) return router.push({ name: 'notifikasi' })
+  markAsRead(n).catch(() => {})
+  router.push(destinasiNotifikasi(n, currentUser.value?.peranan))
+}
+
+onMounted(() => startNotificationPolling(handleToastView))
 onUnmounted(stopNotificationPolling)
 </script>
 
@@ -47,7 +63,7 @@ onUnmounted(stopNotificationPolling)
         <nav class="text-muted-foreground flex min-w-0 items-center gap-1.5 text-sm">
           <span class="hidden sm:inline">SPSK</span>
           <ChevronRight class="hidden size-4 sm:inline" />
-          <span class="text-foreground truncate font-medium">{{ route.meta.title }}</span>
+          <span class="text-foreground truncate font-medium">{{ pageTitle }}</span>
         </nav>
         <div class="ml-auto flex items-center gap-1">
           <NotificationBell />

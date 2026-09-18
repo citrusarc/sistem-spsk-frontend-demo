@@ -4,6 +4,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import {
   CheckCircle,
   ChevronsUpDown,
+  ClipboardCheck,
   FileCheck2,
   FilePlus,
   FileText,
@@ -32,6 +33,10 @@ interface MenuItem {
   label: string
   icon: Component
   roles?: Peranan[]
+  // Label/ikon berbeza bagi peranan tertentu (laluan kekal sama).
+  override?: Partial<Record<Peranan, { label: string; icon: Component }>>
+  // Laluan lain yang turut menandakan menu ini aktif (cth. halaman butiran).
+  activeFor?: string[]
 }
 
 const KONTRAK_ROLES: Peranan[] = ['PT_KONTRAK', 'PUU', 'PEGAWAI_PENYEMAK']
@@ -42,7 +47,14 @@ const menuGroups: { label: string; items: MenuItem[] }[] = [
     label: 'Utama',
     items: [
       { to: { name: 'dashboard' }, label: 'Dashboard', icon: LayoutDashboard, roles: KONTRAK_ROLES },
-      { to: { name: 'kontrak' }, label: 'Senarai Kontrak', icon: FileText, roles: KONTRAK_ROLES },
+      {
+        to: { name: 'kontrak' },
+        label: 'Senarai Kontrak',
+        icon: FileText,
+        roles: KONTRAK_ROLES,
+        override: { PEGAWAI_PENYEMAK: { label: 'Kontrak Selesai Disemak', icon: ClipboardCheck } },
+        activeFor: ['kontrak-butiran'],
+      },
     ],
   },
   {
@@ -67,7 +79,9 @@ const visibleGroups = computed(() => {
   return menuGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => !item.roles || (peranan && item.roles.includes(peranan))),
+      items: group.items
+        .filter((item) => !item.roles || (peranan && item.roles.includes(peranan)))
+        .map((item) => ({ ...item, ...(peranan && item.override?.[peranan]) })),
     }))
     .filter((group) => group.items.length > 0)
 })
@@ -109,7 +123,7 @@ function handleLogout() {
           :class="
             cn(
               'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-              route.name === item.to.name
+              route.name === item.to.name || item.activeFor?.includes(String(route.name))
                 ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium [&>svg]:text-sidebar-primary'
                 : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground',
             )

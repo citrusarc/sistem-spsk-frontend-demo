@@ -1,12 +1,14 @@
 import { ref, type Component } from 'vue'
 import { toast } from 'vue-sonner'
-import { AlertTriangle, Bell, CheckCircle2, ClipboardCheck, OctagonAlert, UserPlus } from '@lucide/vue'
+import type { RouteLocationRaw } from 'vue-router'
+import { AlertTriangle, Bell, CheckCircle2, ClipboardCheck, FilePlus, OctagonAlert, RotateCcw, UserPlus } from '@lucide/vue'
 import {
   getNotifications,
   getUnreadCount,
   tandakanNotifikasiDibaca,
   type JenisNotifikasi,
   type Notification,
+  type Peranan,
 } from './api'
 
 // Label, ikon & warna bagi setiap jenis notifikasi (warna ikut jadual badge dalam CLAUDE.md).
@@ -17,6 +19,8 @@ const JENIS_NOTIFIKASI: Record<JenisNotifikasi, { label: string; icon: Component
   AMARAN_MERAH: { label: 'Amaran Merah', icon: OctagonAlert, class: 'bg-red-500/10 text-red-600' },
   SEMAKAN_SELESAI: { label: 'Semakan Selesai', icon: ClipboardCheck, class: 'bg-purple-500/10 text-purple-600' },
   KONTRAK_DITUTUP: { label: 'Kontrak Ditutup', icon: CheckCircle2, class: 'bg-green-500/10 text-green-600' },
+  DALAM_SEMAKAN: { label: 'Semakan Semula PUU', icon: RotateCcw, class: 'bg-purple-500/10 text-purple-600' },
+  TERIMA: { label: 'Kontrak Baharu', icon: FilePlus, class: 'bg-secondary text-secondary-foreground' },
 }
 
 // Enum jenis_notifikasi masih terbuka (API.md §3) — jangan pecah jika backend hantar nilai baharu.
@@ -30,6 +34,13 @@ export function jenisNotifikasiMeta(jenis: string) {
   )
 }
 
+// Halaman yang dibuka apabila notifikasi diklik: butiran kontrak, kecuali kontrak baharu (TERIMA) bagi PUU
+// yang terus ke skrin Pengesahan Kontrak.
+export function destinasiNotifikasi(n: Notification, peranan: Peranan | undefined): RouteLocationRaw {
+  if (peranan === 'PUU' && n.jenis_notifikasi === 'TERIMA') return { name: 'kontrak-pengesahan' }
+  return { name: 'kontrak-butiran', params: { id: n.contract_id } }
+}
+
 const POLL_INTERVAL_MS = 30_000
 const MAX_INDIVIDUAL_TOASTS = 3
 
@@ -40,7 +51,8 @@ export const isLoadingNotifications = ref(false)
 
 const seenIds = new Set<string>()
 let timer: ReturnType<typeof setInterval> | null = null
-let onView: () => void = () => {}
+// Dipanggil oleh butang Lihat pada toast: dengan notifikasi = buka halaman berkaitan; tanpa = buka skrin Notifikasi.
+let onView: (n?: Notification) => void = () => {}
 
 export async function loadNotifications() {
   isLoadingNotifications.value = true
@@ -69,7 +81,7 @@ export async function markAsRead(n: Notification) {
 
 function showToast(n: Notification) {
   const meta = jenisNotifikasiMeta(n.jenis_notifikasi)
-  const options = { description: n.mesej, action: { label: 'Lihat', onClick: () => onView() } }
+  const options = { description: n.mesej, action: { label: 'Lihat', onClick: () => onView(n) } }
   // Warna toast: merah = kritikal, kuning = amaran, hijau = berjaya/selesai, biru = maklumat, kelabu = lain-lain.
   switch (n.jenis_notifikasi) {
     case 'AMARAN_MERAH':
@@ -81,6 +93,8 @@ function showToast(n: Notification) {
     case 'KONTRAK_DITUTUP':
       return toast.success(meta.label, options)
     case 'PENUGASAN_BARU':
+    case 'DALAM_SEMAKAN':
+    case 'TERIMA':
       return toast.info(meta.label, options)
     default:
       return toast(meta.label, options)
@@ -110,7 +124,7 @@ async function poll() {
 }
 
 // Tiada push dari backend — semak kiraan belum baca secara berkala (#16) dan muat senarai (#14) bila berubah.
-export async function startNotificationPolling(handleView: () => void) {
+export async function startNotificationPolling(handleView: (n?: Notification) => void) {
   stopNotificationPolling()
   onView = handleView
   try {

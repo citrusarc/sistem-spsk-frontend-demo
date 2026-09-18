@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { toast } from 'vue-sonner'
+import SuccessDialog from '@/components/SuccessDialog.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -24,6 +24,8 @@ const penyemakOptions = ref<User[]>([])
 const isLoadingPenyemak = ref(true)
 const errorMessage = ref('')
 const isSubmitting = ref(false)
+const isSuccessOpen = ref(false)
+const createdId = ref<string | null>(null)
 
 onMounted(async () => {
   try {
@@ -67,7 +69,7 @@ async function handleSubmit() {
   }
   isSubmitting.value = true
   try {
-    await createContract({
+    const created = await createContract({
       nama_kontrak: namaKontrak.value,
       tahap_keutamaan: tahapKeutamaan.value,
       tarikh_terima_puu: tarikhTerimaPuu.value,
@@ -76,14 +78,18 @@ async function handleSubmit() {
       pegawai_penyemak_id: pegawaiPenyemakId.value,
       fail_pdf: failPdf.value,
     })
-    toast.success(`Kontrak ${namaKontrak.value} telah didaftarkan.`)
+    createdId.value = created.id
     resetForm()
-    router.push({ name: 'dashboard' })
+    isSuccessOpen.value = true
   } catch (err) {
     errorMessage.value = err instanceof Error ? err.message : 'Pendaftaran kontrak gagal.'
   } finally {
     isSubmitting.value = false
   }
+}
+
+function handleSuccessClose() {
+  if (createdId.value) router.push({ name: 'kontrak-butiran', params: { id: createdId.value } })
 }
 </script>
 
@@ -156,5 +162,13 @@ async function handleSubmit() {
         </form>
       </CardContent>
     </Card>
+
+    <SuccessDialog
+      v-model:open="isSuccessOpen"
+      title="Kontrak Didaftarkan"
+      message="Kontrak telah didaftarkan dan dihantar kepada PUU untuk pengesahan."
+      button-label="Lihat Kontrak"
+      @close="handleSuccessClose"
+    />
   </div>
 </template>

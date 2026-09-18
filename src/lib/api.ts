@@ -46,6 +46,8 @@ export interface Contract {
   updated_at: string
   hari_bekerja: number | null
   status_warna: StatusWarna
+  // true = PT Kontrak telah hantar untuk semakan semula PUU yang belum selesai (hanya bermakna semasa DALAM_SEMAKAN).
+  menunggu_semakan_puu: boolean
   pt_kontrak: { id: string; nama_penuh: string } | null
   pegawai_penyemak: { id: string; nama_penuh: string } | null
 }
@@ -67,6 +69,10 @@ export type JenisNotifikasi =
   | 'AMARAN_MERAH'
   | 'SEMAKAN_SELESAI'
   | 'KONTRAK_DITUTUP'
+  // Nama sama dengan status_semasa DALAM_SEMAKAN tetapi maksud berbeza: PUU diminta semak semula (API.md §2.4).
+  | 'DALAM_SEMAKAN'
+  // Nama sama dengan status_semasa TERIMA: kontrak baharu menunggu pengesahan penugasan (penerima: PUU).
+  | 'TERIMA'
 
 export interface Notification {
   id: string

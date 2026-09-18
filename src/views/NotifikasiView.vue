@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { BellOff } from '@lucide/vue'
 import NotificationItem from '@/components/NotificationItem.vue'
@@ -7,8 +8,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { Notification } from '@/lib/api'
-import { isLoadingNotifications, loadNotifications, markAsRead, notifications, unreadCount } from '@/lib/notifications'
+import { currentUser } from '@/lib/auth'
+import { destinasiNotifikasi, isLoadingNotifications, loadNotifications, markAsRead, notifications, unreadCount } from '@/lib/notifications'
 
+const router = useRouter()
 const filter = ref<'SEMUA' | 'BELUM_DIBACA'>('SEMUA')
 const errorMessage = ref('')
 
@@ -30,6 +33,7 @@ async function handleSelect(n: Notification) {
   } catch (err) {
     toast.error(err instanceof Error ? err.message : 'Gagal menandakan notifikasi sebagai dibaca.')
   }
+  router.push(destinasiNotifikasi(n, currentUser.value?.peranan))
 }
 </script>
 
@@ -37,7 +41,7 @@ async function handleSelect(n: Notification) {
   <div class="space-y-6">
     <div class="space-y-1">
       <h1 class="text-2xl font-semibold tracking-tight">Notifikasi</h1>
-      <p class="text-muted-foreground text-sm">Klik notifikasi untuk menandakannya sebagai telah dibaca.</p>
+      <p class="text-muted-foreground text-sm">Klik notifikasi untuk membuka kontrak berkaitan.</p>
     </div>
 
     <p v-if="errorMessage" class="text-destructive text-sm">{{ errorMessage }}</p>
